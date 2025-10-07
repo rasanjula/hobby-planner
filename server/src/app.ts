@@ -1,7 +1,8 @@
 // server/src/app.ts
-import express from "express";
+import express, { type Request, type Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import sessionsRouter from "./routes/sessions";
 
 dotenv.config();
 
@@ -11,17 +12,17 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGIN || "http://localhost:5173"
+    origin: process.env.ALLOWED_ORIGIN || "http://localhost:5173",
+    credentials: true,
   })
 );
 
 // health check
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
-// TODO: add routes here later, e.g.:
-// import sessions from "./routes/sessions";
-// app.use("/api/sessions", sessions);
+// mount routes
+app.use("/api/sessions", sessionsRouter);
 
 export default app;
