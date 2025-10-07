@@ -120,3 +120,102 @@ router.post("/", async (req: Request<{}, {}, CreateBody>, res: Response) => {
   }
 });
 export default router;
+/** ===== Attendance: JOIN (POST) =====
+ * POST /api/sessions/:id/attendees
+ * body: { display_name?: string }
+ * returns: { attendeeId, attendanceCode }
+ */
+import type { QueryResult } from "pg";
+type JoinBody = { display_name?: string | null };
+const GET_SESSION_SQL = `
+SELECT id, max_participants, management_code
+FROM sessions
+WHERE id = $1
+`;
+const COUNT_ATTENDEES_SQL = `
+SELECT COUNT(*)::int AS count
+FROM attendees
+WHERE session_id = $1
+`;
+const INSERT_ATTENDEE_SQL = `
+INSERT INTO attendees (id, session_id, attendance_code, display_name)
+VALUES ($1, $2, $3, $4)
+RETURNING id
+`;
+router.post("/:id/attendees", async (req: Request<{id: string}, {}, JoinBody>, res: Response) => {
+  try {
+    const sid = req.params.id;
+    const sRes = await pool.query(GET_SESSION_SQL, [sid]);
+    if (sRes.rowCount === 0) return res.status(404).json({ error: "Session not found" });
+    const session = sRes.rows[0] as { id: string; max_participants: number; management_code: string };
+    const cRes: QueryResult<{ count: number }> = await pool.query(COUNT_ATTENDEES_SQL, [sid]);
+    const current = cRes.rows[0]?.count ?? 0;
+    if (current >= session.max_participants) {
+      return res.status(409).json({ error: "Session is full" });
+    }
+    const attendeeId = nanoid(10);
+    const attendanceCode = nanoid(12);
+    const displayName = req.body?.display_name ?? null;
+    const iRes = await pool.query(INSERT_ATTENDEE_SQL, [attendeeId, sid, attendanceCode, displayName]);
+    if (iRes.rowCount !== 1) {
+      return res.status(500).json({ error: "Failed to join" });
+    }
+    res.status(201).json({ attendeeId, attendanceCode });
+  } catch (err) {
+    console.error("POST /api/sessions/:id/attendees failed:", err);
+    res.status(500).json({ error: "Join failed" });
+  }
+});
+/** ===== Attendance: SELF LEAVE (DELETE with attendance code) =====
+ * DELETE /api/sessions/:id/attendees/:aid?attendance=CODE
+ */
+const DELETE_SELF_SQL = `
+DELETE FROM attendees
+WHERE session_id = $1 AND id = $2 AND attendance_code = $3
+`;
+router.delete("/:id/attendees/:aid", async (req: Request<{id: string, aid: string}, {}, {}>, res: Response) => {
+  try {
+    const sid = req.params.id;
+    const aid = req.params.aid;
+    const attendanceCode = (req.query.attendance as string) || null;
+    const manageCode = (req.query.manage as string) || null;
+    if (attendanceCode) {
+      const dRes = await pool.query(DELETE_SELF_SQL, [sid, aid, attendanceCode]);
+      if (dRes.rowCount === 0) return res.status(404).json({ error: "Not found or code mismatch" });
+      return res.status(204).send();
+    }
+    // ===== Attendance: MANAGER REMOVE (DELETE with manage code) =====
+    if (manageCode) {
+      const sRes = await pool.query(GET_SESSION_SQL, [sid]);
+      if (sRes.rowCount === 0) return res.status(404).json({ error: "Session not found" });
+      const session = sRes.rows[0] as { management_code: string };
+      if (session.management_code !== manageCode) {
+        return res.status(403).json({ error: "Invalid manage code" });
+      }
+      const dRes = await pool.query(`DELETE FROM attendees WHERE session_id=$1 AND id=$2`, [sid, aid]);
+      if (dRes.rowCount === 0) return res.status(404).json({ error: "Attendee not found" });
+      return res.status(204).send();
+    }
+    return res.status(400).json({ error: "Provide attendance=CODE or manage=CODE" });
+  } catch (err) {
+    console.error("DELETE /api/sessions/:id/attendees/:aid failed:", err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+/** ===== Attendance: COUNT =====
+ * GET /api/sessions/:id/attendees/count  -> { count, max }
+ */
+router.get("/:id/attendees/count", async (req: Request<{id: string}>, res: Response) => {
+  try {
+    const sid = req.params.id;
+    const sRes = await pool.query(GET_SESSION_SQL, [sid]);
+    if (sRes.rowCount === 0) return res.status(404).json({ error: "Session not found" });
+    const max = sRes.rows[0].max_participants as number;
+    const cRes: QueryResult<{ count: number }> = await pool.query(COUNT_ATTENDEES_SQL, [sid]);
+    const count = cRes.rows[0]?.count ?? 0;
+    res.json({ count, max });
+  } catch (err) {
+    console.error("GET /api/sessions/:id/attendees/count failed:", err);
+    res.status(500).json({ error: "Count failed" });
+  }
+});
