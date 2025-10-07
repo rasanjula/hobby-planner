@@ -4,3 +4,4 @@ build
 .env
 .env.*
 .DS_Store
+server/src/routes/*.backup.ts
