@@ -1,20 +1,15 @@
-﻿class HttpError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "HttpError";
-    this.status = status;
-  }
-}
-
-const BASE: string = import.meta.env.VITE_API_BASEURL ?? "";
-
+﻿const BASE = import.meta.env.VITE_API_BASEURL ?? "";
 export async function apiGet<T>(path: string): Promise<T> {
-  const url: string = `${BASE}${path}`; // ← template string with path
-  const r: Response = await fetch(url);
-  if (!r.ok) {
-    throw new HttpError(`GET ${path} failed: ${r.status}`, r.status);
-  }
-  const data: unknown = await r.json();
-  return data as T;
+  const r = await fetch(`${BASE}${path}`);
+  if (!r.ok) throw new Error(`GET ${path} failed: ${r.status}`);
+  return r.json() as Promise<T>;
+}
+export async function apiPost<T>(path: string, data: unknown): Promise<T> {
+  const r = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw new Error(`POST ${path} failed: ${r.status}`);
+  return r.json() as Promise<T>;
 }

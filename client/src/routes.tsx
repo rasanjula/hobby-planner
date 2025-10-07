@@ -1,8 +1,10 @@
 ﻿import { createBrowserRouter } from "react-router-dom";
 import SessionsList from "./pages/SessionsList";
+import CreateSession from "./pages/CreateSession";
+import SessionDetails from "./pages/SessionDetails";
 export const router = createBrowserRouter([
   { path: "/", element: <SessionsList /> },
-  { path: "/create", element: <div>CreateSession (coming Day 3)</div> },
-  { path: "/session/:id", element: <div>SessionDetails (Day 3)</div> },
+  { path: "/create", element: <CreateSession /> },
+  { path: "/session/:id", element: <SessionDetails /> },
   { path: "/session/:id/manage", element: <div>ManageSession (Day 5)</div> }
 ]);
