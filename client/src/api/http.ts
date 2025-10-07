@@ -1,6 +1,20 @@
-const API = import.meta.env.VITE_API_BASEURL || "http://localhost:4000";
-export async function api<T = any>(path: string, init?: RequestInit) {
-  const res = await fetch(`${API}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers||{}) }});
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-  return (await res.json()) as T;
+﻿class HttpError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+
+const BASE: string = import.meta.env.VITE_API_BASEURL ?? "";
+
+export async function apiGet<T>(path: string): Promise<T> {
+  const url: string = `${BASE}${path}`; // ← template string with path
+  const r: Response = await fetch(url);
+  if (!r.ok) {
+    throw new HttpError(`GET ${path} failed: ${r.status}`, r.status);
+  }
+  const data: unknown = await r.json();
+  return data as T;
 }
