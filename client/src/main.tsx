@@ -1,3 +1,5 @@
+import 'leaflet/dist/leaflet.css';
+import './lib/leaflet-icons';
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";

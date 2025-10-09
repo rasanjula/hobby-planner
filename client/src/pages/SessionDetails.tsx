@@ -1,5 +1,6 @@
 ﻿/* augment existing SessionDetails page */
 import { useEffect, useState } from "react";
+import MapView from "../components/MapView";
 import { useParams } from "react-router-dom";
 import { getSessionById, getSessionByCode, type Session } from "../api/sessions";
 import { getAttendeeCount, joinSession, leaveSessionSelf } from "../api/sessions";
@@ -97,6 +98,14 @@ export default function SessionDetails() {
           </button>
         )}
       </div>
+
+         {(data.lat ?? null) && (data.lng ?? null) ? (
+        <>
+          <h3 style={{ marginTop: 16 }}>Map</h3>
+          <MapView lat={data.lat!} lng={data.lng!} title={data.title} />
+        </>
+      ) : null}
+
     </div>
   );
 }
