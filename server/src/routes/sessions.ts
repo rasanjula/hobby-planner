@@ -219,3 +219,77 @@ router.get("/:id/attendees/count", async (req: Request<{id: string}>, res: Respo
     res.status(500).json({ error: "Count failed" });
   }
 });
+/** ===== Manage: PATCH session (with manage code) =====
+ * PATCH /api/sessions/:id?manage=CODE
+ * body: partial { hobby?, title?, description?, date_time?, max_participants?, type?, location_text?, lat?, lng? }
+ * returns: updated session fields
+ */
+type PatchBody = Partial<{
+  hobby: string;
+  title: string;
+  description: string | null;
+  date_time: string; // ISO
+  max_participants: number;
+  type: "public" | "private";
+  location_text: string | null;
+  lat: number | string | null;
+  lng: number | string | null;
+}>;
+const GET_MANAGE_SQL = `
+SELECT id, management_code
+FROM sessions
+WHERE id = $1
+`;
+router.patch("/:id", async (req: Request<{id: string}, {}, PatchBody>, res: Response) => {
+  try {
+    const sid = req.params.id;
+    const manage = req.query.manage as string | undefined;
+    if (!manage) return res.status(400).json({ error: "Missing manage code" });
+    const sRes = await pool.query(GET_MANAGE_SQL, [sid]);
+    if (sRes.rowCount === 0) return res.status(404).json({ error: "Session not found" });
+    const { management_code } = sRes.rows[0] as { management_code: string };
+    if (management_code !== manage) return res.status(403).json({ error: "Invalid manage code" });
+    const allowed: (keyof PatchBody)[] = [
+      "hobby","title","description","date_time","max_participants","type","location_text","lat","lng"
+    ];
+    const body = req.body || {};
+    const entries = Object.entries(body).filter(([k,v]) => allowed.includes(k as keyof PatchBody) && v !== undefined);
+    if (entries.length === 0) return res.status(400).json({ error: "No valid fields to update" });
+    // Build dynamic UPDATE
+    const sets: string[] = [];
+    const params: any[] = [];
+    entries.forEach(([k,v], i) => {
+      sets.push(`${k} = $${i+1}`);
+      params.push(v);
+    });
+    params.push(sid);
+    const UPDATE_SQL = `UPDATE sessions SET ${sets.join(", ")} WHERE id = $${params.length} RETURNING
+      id, hobby, title, description, date_time, max_participants, type, location_text, lat, lng
+    `;
+    const uRes = await pool.query(UPDATE_SQL, params);
+    res.json(uRes.rows[0]);
+  } catch (err) {
+    console.error("PATCH /api/sessions/:id failed:", err);
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+/** ===== Manage: DELETE session (with manage code) =====
+ * DELETE /api/sessions/:id?manage=CODE
+ */
+router.delete("/:id", async (req: Request<{id: string}>, res: Response) => {
+  try {
+    const sid = req.params.id;
+    const manage = req.query.manage as string | undefined;
+    if (!manage) return res.status(400).json({ error: "Missing manage code" });
+    const sRes = await pool.query(GET_MANAGE_SQL, [sid]);
+    if (sRes.rowCount === 0) return res.status(404).json({ error: "Session not found" });
+    const { management_code } = sRes.rows[0] as { management_code: string };
+    if (management_code !== manage) return res.status(403).json({ error: "Invalid manage code" });
+    const dRes = await pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]);
+    if (dRes.rowCount === 0) return res.status(404).json({ error: "Not deleted" });
+    res.status(204).send();
+  } catch (err) {
+    console.error("DELETE /api/sessions/:id failed:", err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
