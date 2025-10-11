@@ -1,13 +1,18 @@
-﻿import { useState } from "react";
+﻿// client/src/pages/CreateSession.tsx
+import { useState, FormEvent, useMemo } from "react";
 import { HOBBIES } from "../lib/constants";
-import { createSession, type CreateSessionInput, type CreateSessionOutput } from "../api/sessions";
+import {
+  createSession,
+  type CreateSessionInput,
+  type CreateSessionOutput,
+} from "../api/sessions";
 
 export default function CreateSession() {
   const [form, setForm] = useState<CreateSessionInput>({
-    hobby: "Reading",
+    hobby: HOBBIES[0] || "Reading",
     title: "",
     description: "",
-    date_time: "",
+    date_time: "", // yyyy-MM-ddTHH:mm from <input type="datetime-local">
     max_participants: 10,
     type: "public",
     location_text: "",
@@ -20,156 +25,316 @@ export default function CreateSession() {
   const [loading, setLoading] = useState(false);
 
   function set<K extends keyof CreateSessionInput>(key: K, val: CreateSessionInput[K]) {
-    setForm((prev) => ({ ...prev, [key]: val }));
+    setForm(prev => ({ ...prev, [key]: val }));
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  // helpers to guarantee no `undefined` is sent to the API
+  const normStrOrNull = (v: unknown): string | null => {
+    if (v === null || v === undefined) return null;
+    const s = String(v).trim();
+    return s === "" ? null : s;
+  };
+  const normNumStrOrNull = (v: unknown): number | string | null => {
+    if (v === undefined || v === null || v === "") return null;
+    return v as number | string; // keep number or numeric string
+  };
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
     try {
-      // normalize fields:
-      const toNull = (v: unknown) => (v === "" ? null : (v as any));
-
-      // date_time → ISO (UTC). Keep simple for demo.
       const iso = form.date_time ? new Date(form.date_time).toISOString() : "";
 
-      // lat/lng → number | null (never empty strings)
-      const latRaw = form.lat as any;
-      const lngRaw = form.lng as any;
-      const latNum =
-        latRaw === "" || latRaw == null ? null : Number(latRaw);
-      const lngNum =
-        lngRaw === "" || lngRaw == null ? null : Number(lngRaw);
-
       const payload: CreateSessionInput = {
-        hobby: form.hobby,
-        title: form.title,
-        description: toNull(form.description),
+        ...form,
         date_time: iso,
-        max_participants: Number(form.max_participants),
-        type: form.type,
-        location_text: toNull(form.location_text),
-        lat: Number.isFinite(latNum as number) ? (latNum as number) : null,
-        lng: Number.isFinite(lngNum as number) ? (lngNum as number) : null,
+        description: normStrOrNull(form.description),
+        location_text: normStrOrNull(form.location_text),
+        lat: normNumStrOrNull(form.lat),
+        lng: normNumStrOrNull(form.lng),
       };
 
       const out = await createSession(payload);
-      setResult(out);
-    } catch (ex: any) {
-      setErr(ex?.message ?? "Create failed");
+      setResult(out); // show the success panel
+    } catch (e: any) {
+      setErr(e?.message || "Failed to create session");
     } finally {
       setLoading(false);
     }
   }
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
   return (
-    <div style={{ padding: 16 }}>
-      <h1>Create Session</h1>
+    <main className="page">
+      <div className="container">
+        <h2 className="h2" style={{ marginBottom: 10 }}>Create Session</h2>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 8, maxWidth: 560 }}>
-        <label>Hobby
-          <select value={form.hobby} onChange={(e) => set("hobby", e.target.value as any)}>
-            {HOBBIES.map((h) => (
-              <option key={h} value={h}>{h}</option>
-            ))}
-          </select>
-        </label>
-
-        <label>Title
-          <input value={form.title} onChange={(e) => set("title", e.target.value)} required />
-        </label>
-
-        <label>Description
-          <textarea
-            value={form.description ?? ""}
-            onChange={(e) => set("description", e.target.value)}
-            placeholder="Optional notes about this session"
+        {/* Success panel (persistent, outside the form) */}
+        {result && (
+          <SuccessPanel
+            result={result}
+            origin={origin}
+            onClose={() => setResult(null)}
           />
-        </label>
+        )}
 
-        <label>Date & Time
-          <input
-            type="datetime-local"
-            value={form.date_time}
-            onChange={(e) => set("date_time", e.target.value)}
-            required
-          />
-        </label>
+        <form className="form" onSubmit={onSubmit} noValidate>
+          {/* Row: hobby + max participants */}
+          <div className="form-grid two">
+            <div>
+              <label htmlFor="hobby">Hobby</label>
+              <select
+                id="hobby"
+                className="select"
+                value={form.hobby}
+                onChange={(e) => set("hobby", e.target.value)}
+              >
+                {HOBBIES.map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
 
-        <label>Max participants
-          <input
-            type="number"
-            min={1}
-            value={form.max_participants}
-            onChange={(e) => set("max_participants", Number(e.target.value))}
-            required
-          />
-        </label>
-
-        <label>Type
-          <select value={form.type} onChange={(e) => set("type", e.target.value as any)}>
-            <option value="public">public</option>
-            <option value="private">private</option>
-          </select>
-        </label>
-
-        <label>Location (text)
-          <input
-            value={form.location_text ?? ""}
-            onChange={(e) => set("location_text", e.target.value)}
-            placeholder="e.g., Oulu Library"
-          />
-        </label>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <label>Lat
-            <input
-              value={form.lat ?? ""}
-              onChange={(e) => set("lat", e.target.value || null)}
-              placeholder="65.012"
-              inputMode="decimal"
-            />
-          </label>
-          <label>Lng
-            <input
-              value={form.lng ?? ""}
-              onChange={(e) => set("lng", e.target.value || null)}
-              placeholder="25.465"
-              inputMode="decimal"
-            />
-          </label>
-        </div>
-
-        <button disabled={loading}>{loading ? "Creating…" : "Create"}</button>
-      </form>
-
-      {err && <p style={{ color: "tomato" }}>Error: {err}</p>}
-
-      {result && (
-        <div style={{ marginTop: 16, padding: 12, border: "1px dashed #666", borderRadius: 8 }}>
-          <h3>Created</h3>
-          <div><strong>Session ID:</strong> {result.id}</div>
-          <div><strong>Management code:</strong> {result.managementCode}</div>
-          {result.privateUrlCode && (
-            <div><strong>Private URL code:</strong> {result.privateUrlCode}</div>
-          )}
-          <div style={{ marginTop: 8 }}>
-            <CopyButton text={result.manageUrl} label="Copy Manage URL Path" />
+            <div>
+              <label htmlFor="max">Max participants</label>
+              <input
+                id="max"
+                className="input"
+                type="number"
+                min={1}
+                value={form.max_participants}
+                onChange={(e) => set("max_participants", Number(e.target.value || 1))}
+              />
+            </div>
           </div>
-          <p style={{ marginTop: 8, opacity: 0.8 }}>
-            Keep these codes safe. They won’t show again in lists.
-          </p>
-        </div>
-      )}
-    </div>
+
+          {/* Title */}
+          <div style={{ marginTop: 8 }}>
+            <label htmlFor="title">Title</label>
+            <input
+              id="title"
+              className="input"
+              placeholder="e.g., Reading Circle — Chapter 3"
+              value={form.title}
+              onChange={(e) => set("title", e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Description */}
+          <div style={{ marginTop: 8 }}>
+            <label htmlFor="desc">
+              Description <span className="help">(optional)</span>
+            </label>
+            <textarea
+              id="desc"
+              className="input"
+              placeholder="What are you planning to do?"
+              value={form.description ?? ""}
+              onChange={(e) => set("description", e.target.value)}
+            />
+          </div>
+
+          {/* Row: date_time + type */}
+          <div className="form-grid two" style={{ marginTop: 8 }}>
+            <div>
+              <label htmlFor="dt">Date &amp; time</label>
+              <input
+                id="dt"
+                className="input"
+                type="datetime-local"
+                value={form.date_time}
+                onChange={(e) => set("date_time", e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="type">Type</label>
+              <select
+                id="type"
+                className="select"
+                value={form.type}
+                onChange={(e) => set("type", e.target.value as "public" | "private")}
+              >
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Location block */}
+          <div className="form-grid two" style={{ marginTop: 8 }}>
+            <div>
+              <label htmlFor="loc">
+                Location (text) <span className="help">(optional)</span>
+              </label>
+              <input
+                id="loc"
+                className="input"
+                placeholder="Oulu Library"
+                value={form.location_text ?? ""}
+                onChange={(e) => set("location_text", e.target.value)}
+              />
+            </div>
+
+            <div className="form-grid two">
+              <div>
+                <label htmlFor="lat">
+                  Latitude <span className="help">(optional)</span>
+                </label>
+                <input
+                  id="lat"
+                  className="input"
+                  type="number"
+                  step="any"
+                  value={form.lat ?? ""}
+                  onChange={(e) => set("lat", e.target.value === "" ? null : Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label htmlFor="lng">
+                  Longitude <span className="help">(optional)</span>
+                </label>
+                <input
+                  id="lng"
+                  className="input"
+                  type="number"
+                  step="any"
+                  value={form.lng ?? ""}
+                  onChange={(e) => set("lng", e.target.value === "" ? null : Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Errors + actions */}
+          {err && (
+            <div
+              className="card"
+              style={{ marginTop: 8, color: "#b91c1c", borderColor: "#fecaca" }}
+            >
+              Error: {err}
+            </div>
+          )}
+
+          <div className="actions">
+            <button className="btn btn-primary" type="submit" disabled={loading}>
+              {loading ? "Creating…" : "Create session"}
+            </button>
+            <a className="btn btn-outline" href="/">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </main>
   );
 }
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
+/* ===== Success panel component ===== */
+
+function CopyBtn({ text, children }: { text: string; children: React.ReactNode }) {
+  const [copied, setCopied] = useState(false);
   return (
-    <button type="button" onClick={() => navigator.clipboard.writeText(text)}>
-      {label ?? "Copy"}
+    <button
+      className="btn"
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+      }}
+    >
+      {copied ? "Copied!" : children}
     </button>
+  );
+}
+
+function SuccessPanel({
+  result,
+  origin,
+  onClose,
+}: {
+  result: CreateSessionOutput;
+  origin: string;
+  onClose: () => void;
+}) {
+  // Expecting your API to return:
+  // - result.id
+  // - result.managementCode
+  // - result.manageUrl (e.g., "/session/<id>/manage?code=<code>")
+  // - result.privateUrlCode (nullable for public sessions)
+  //
+  // If your keys are snake_case, adjust accordingly.
+
+  const viewPath = useMemo(() => {
+    return result.privateUrlCode
+      ? `/session/by-code/${result.privateUrlCode}`
+      : `/session/${result.id}`;
+  }, [result.privateUrlCode, result.id]);
+
+  const managePath = useMemo(() => result.manageUrl, [result.manageUrl]);
+
+  const viewUrl = useMemo(() => `${origin}${viewPath}`, [origin, viewPath]);
+  const manageUrl = useMemo(() => `${origin}${managePath}`, [origin, managePath]);
+
+  return (
+    <div
+      className="card"
+      style={{
+        background: "#ecfdf5",
+        borderColor: "#34d399",
+        marginBottom: 14,
+      }}
+    >
+      <h3 style={{ marginTop: 0 }}>Session created successfully!</h3>
+
+      <div style={{ marginTop: 4 }}>
+        <strong>Management code:</strong>{" "}
+        <code>{result.managementCode}</code>
+      </div>
+
+      {/* View link (public OR private) */}
+      <div style={{ marginTop: 10 }}>
+        <div>
+          <strong>{result.privateUrlCode ? "Private link:" : "View link:"}</strong>{" "}
+          <a href={viewPath}>{viewPath}</a>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <input
+            readOnly
+            className="input"
+            value={viewUrl}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          {/* ⤵ Copies the VIEW URL only */}
+          <CopyBtn text={viewUrl}>Copy</CopyBtn>
+        </div>
+      </div>
+
+      {/* Management link */}
+      <div style={{ marginTop: 10 }}>
+        <div>
+          <strong>Management link:</strong>{" "}
+          <a href={managePath}>{managePath}</a>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <input
+            readOnly
+            className="input"
+            value={manageUrl}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          {/* ⤵ Copies the MANAGEMENT URL only (separate prop) */}
+          <CopyBtn text={manageUrl}>Copy Management Link</CopyBtn>
+        </div>
+      </div>
+
+      <div className="actions" style={{ marginTop: 12 }}>
+        <button className="btn btn-outline" onClick={onClose}>
+          Create another
+        </button>
+      </div>
+    </div>
   );
 }

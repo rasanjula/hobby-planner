@@ -2,31 +2,39 @@
 import type { Session } from "../api/sessions";
 import { formatISOToLocal } from "../lib/date";
 
-interface Props {
-  s: Session;
-}
+export default function SessionCard({ s }: { s: Session }) {
+  const [d, t] = formatISOToLocal(s.date_time).split(" ");
 
-export default function SessionCard({ s }: Props) {
   return (
     <Link
       to={`/session/${s.id}`}
-      style={{ textDecoration: "none", color: "inherit" }}
       aria-label={`Open session ${s.title}`}
+      className="card"
+      style={{ display: "block", textDecoration: "none", color: "inherit" }}
     >
-      <div
-        style={{
-          border: "1px solid #444",
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 12,
-          transition: "background 120ms, border-color 120ms",
-        }}
-      >
-        <h3 style={{ margin: "0 0 6px" }}>{s.title}</h3>
-        <div><strong>Hobby:</strong> {s.hobby}</div>
-        <div><strong>When:</strong> {formatISOToLocal(s.date_time)}</div>
-        {s.location_text && <div><strong>Where:</strong> {s.location_text}</div>}
-        {s.description && <p style={{ marginTop: 6 }}>{s.description}</p>}
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        {/* show type as a fixed badge if you like; or use s.type */}
+        <span className="badge">{s.type || "public"}</span>
+        <span className="muted">{s.hobby}</span>
+      </div>
+
+      <h3 style={{ margin: "0" }}>{s.title}</h3>
+
+      {s.description && (
+        <div className="muted" style={{ marginTop: 4 }}>
+          {s.description.length > 140 ? s.description.slice(0, 140) + "…" : s.description}
+        </div>
+      )}
+
+      <div className="row" style={{ marginTop: 6 }}>
+        <span>📅 {d}</span>
+        <span>🕒 {t}</span>
+      </div>
+
+      <div className="row">
+        <span className="muted">
+          {s.location_text ? `📍 ${s.location_text}` : "📍 —"}
+        </span>
       </div>
     </Link>
   );

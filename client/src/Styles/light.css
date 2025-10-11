@@ -1,0 +1,249 @@
+/* ---- Reset & base ---- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #1f2937;            /* gray-800 */
+  background:
+    radial-gradient(1200px 600px at 80% -200px, #ffe3f1 0%, transparent 60%),
+    radial-gradient(1500px 800px at -200px 100%, #eaf3ff 0%, transparent 60%),
+    #ffffff;                  /* white base */
+}
+
+/* ---- Layout helpers ---- */
+.container {
+  max-width: 1120px;          /* ~tailwind container-lg */
+  margin-inline: auto;
+  padding: 24px 16px;
+}
+
+.page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---- Top bar ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 1.5rem;
+}
+
+/* ---- Button ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 14px; border-radius: 12px; border: 1px solid #e5e7eb;
+  background: #ffffff; cursor: pointer; text-decoration: none;
+  font-weight: 600; transition: transform .05s ease, box-shadow .2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+.btn:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.btn:active { transform: translateY(1px); }
+
+/* ---- Section titles ---- */
+.h1 { font-size: clamp(1.6rem, 1.2rem + 1.2vw, 2.2rem); margin: 12px 0 6px; }
+.h2 { font-size: 1.25rem; margin: 10px 0; }
+
+/* ---- Filter area ---- */
+.filters {
+  margin-top: 8px;
+  padding: 14px; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff;
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.input, .select {
+  width: 100%;
+  padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px;
+  background: #fff; outline: none;
+}
+.input:focus, .select:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,.35); }
+
+/* ---- Cards grid ---- */
+.cards {
+  display: grid; gap: 16px; margin-top: 10px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 880px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---- Session card ---- */
+.card {
+  border: 1px solid #eef0f3; border-radius: 16px; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #2563eb;
+  background: #eff6ff; border: 1px solid #dbeafe; border-radius: 999px; padding: 4px 8px;
+}
+
+/* === Logo & Header === */
+.topbar-outer { background:#fff; border-bottom:1px solid #eee; padding:10px 0; }
+.brand { display:flex; align-items:center; gap:12px; }
+
+.logo-badge {
+  width:36px; height:36px; display:grid; place-items:center;
+  border-radius:10px;
+  background:#2563eb; color:#fff; font-weight:800; letter-spacing:.3px;
+  box-shadow:0 4px 14px rgba(37,99,235,.35);
+  border:1px solid rgba(255,255,255,.7);
+}
+
+/* === Buttons === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;              /* readable text */
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  transition: box-shadow .2s ease, transform .05s ease, background .2s ease;
+}
+.btn:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.btn:active { transform: translateY(1px); }
+
+/* === Inputs & Placeholders === */
+.input, .select {
+  color:#111827;              /* real text color */
+  background:#fff;            /* solid white */
+  border:1px solid #e5e7eb;
+}
+
+.input::placeholder { color:#9ca3af; opacity:1; } /* visible */
+.input:-ms-input-placeholder { color:#9ca3af; }
+.input::-ms-input-placeholder { color:#9ca3af; }
+
+input[type="date"].input { color:#111827; }
+
+
+/* === Cards contrast & lift === */
+.card {
+  background:#ffffff;
+  border:1px solid #e5e7eb;
+  border-radius:16px;
+  box-shadow:0 4px 14px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+}
+.card:hover {
+  box-shadow:0 10px 30px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.05);
+}
+
+/* Make the public badge readable */
+.badge {
+  color:#1d4ed8;
+  background:#eff6ff;
+  border:1px solid #dbeafe;
+}
+
+
+
+
+/* Primary (use this for Create session) */
+.btn-primary {
+  background: #2563eb;         /* blue */
+  color: #fff;
+  border-color: #1e40af;
+  box-shadow: 0 6px 16px rgba(37,99,235,.28);
+}
+.btn-primary:hover {
+  box-shadow: 0 10px 24px rgba(37,99,235,.35);
+}
+.btn-primary:focus-visible {
+  outline: 3px solid rgba(147,197,253,.6); /* focus ring */
+  outline-offset: 2px;
+}
+
+/* === Form (Create Session) === */
+.form {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 860px) {
+  .form-grid.two { grid-template-columns: 1fr 1fr; }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+label {
+  display: block;
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.input, .select, textarea.input {
+  width: 100%;
+  background: #ffffff !important;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+textarea.input {
+  min-height: 120px;
+  resize: vertical;
+}
+.input:focus, .select:focus, textarea.input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147,197,253,.35);
+}
+
+.input::placeholder { color: #9ca3af; opacity: 1; }
+
+/* inline help text under labels */
+.help { color: #6b7280; font-size: .85rem; font-weight: 500; }
+
+/* action row */
+.actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+
+
+
+/* Optional outline version if needed elsewhere */
+.btn-outline {
+  background: #fff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+.btn-outline:hover { background: #f8fbff; }
+
+
+.row { display: flex; align-items: center; gap: 10px; color: #4b5563; }
+
+.muted { color: #6b7280; font-size: 0.95rem; }
